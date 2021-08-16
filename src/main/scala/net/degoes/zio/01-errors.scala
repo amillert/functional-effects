@@ -28,10 +28,11 @@ object ErrorConstructor extends App {
    * string value, such as "Uh oh!". Explain the type signature of the
    * effect.
    */
-  val failed: ZIO[Any, String, Nothing] = ???
+  val failed: ZIO[Any, String, Nothing] =
+    ZIO.fail("Uh oh!")
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    failed.foldM(putStrLn(_), putStrLn(_)) as ExitCode.success
+    failed.foldM(putStrLn(_), putStrLn(_)).as(ExitCode.success)
 }
 
 object ErrorRecoveryOrElse extends App {
@@ -46,13 +47,13 @@ object ErrorRecoveryOrElse extends App {
    * effect with another effect that succeeds with a success exit code.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed.orElse(ZIO.succeed(ExitCode.success))
 }
 
 object ErrorShortCircuit extends App {
   import zio.console._
 
-  val failed =
+  val failed: ZIO[Console, String, Unit] =
     putStrLn("About to fail...") *>
       ZIO.fail("Uh oh!") *>
       putStrLn("This will NEVER be printed!")
@@ -64,7 +65,7 @@ object ErrorShortCircuit extends App {
    * succeeds with an exit code.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed.ignore *> ZIO.succeed(ExitCode.success)
 }
 
 object ErrorRecoveryFold extends App {
@@ -79,7 +80,7 @@ object ErrorRecoveryFold extends App {
    * exit codes.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed.fold(_ => ExitCode.failure, _ => ExitCode.success)
 }
 
 object ErrorRecoveryCatchAll extends App {
@@ -94,7 +95,8 @@ object ErrorRecoveryCatchAll extends App {
    * the console using `putStrLn`.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed.catchAll(putStrLn(_).as(ExitCode.failure))
+  // failed.catchAll(putStrLn(_) *> ZIO.succeed(ExitCode.failure))
 }
 
 object ErrorRecoveryFoldM extends App {
@@ -109,7 +111,7 @@ object ErrorRecoveryFoldM extends App {
    * by using `putStrLn`.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed.foldM(putStrLn(_).as(ExitCode.failure), putStrLn(_).as(ExitCode.success))
 }
 
 object ErrorRecoveryEither extends App {
@@ -124,7 +126,7 @@ object ErrorRecoveryEither extends App {
    * channel, and then map the `Either[String, Int]` into an exit code.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed.either.map(_.fold(_ => ExitCode.failure, _ => ExitCode.success))
 }
 
 object ErrorRecoveryIgnore extends App {
@@ -139,7 +141,7 @@ object ErrorRecoveryIgnore extends App {
    * the resulting unit into a successful exit code.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    failed.ignore.map(_ => ExitCode.success)
 }
 
 object ErrorNarrowing extends App {
@@ -154,7 +156,8 @@ object ErrorNarrowing extends App {
    * Using `ZIO#refineToOrDie`, narrow the error type of `broadReadLine` into
    * an `IOException`:
    */
-  val myReadLine: IO[IOException, String] = ???
+  val myReadLine: IO[IOException, String] =
+    broadReadLine.refineToOrDie
 
   def myPrintLn(line: String): UIO[Unit] = UIO(println(line))
 
