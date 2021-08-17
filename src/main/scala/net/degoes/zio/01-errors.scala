@@ -1,6 +1,7 @@
 package net.degoes.zio
 
 import zio._
+import java.sql.Time
 
 /*
  * INTRODUCTION
@@ -184,10 +185,10 @@ object AlarmApp extends App {
    */
   lazy val getAlarmDuration: ZIO[Console, IOException, Duration] = {
     def parseDuration(input: String): IO[NumberFormatException, Duration] =
-      ???
+      ZIO.effect(scala.io.StdIn.readInt()).refineToOrDie.map(x => Duration(x, TimeUnit.HOURS))
 
     def fallback(input: String): ZIO[Console, IOException, Duration] =
-      ???
+      ZIO.succeed(Duration(input.toInt, TimeUnit.HOURS))
 
     for {
       _        <- putStrLn("Please enter the number of seconds to sleep: ")
@@ -204,7 +205,9 @@ object AlarmApp extends App {
    * prints out a wakeup alarm message, like "Time to wakeup!!!".
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    (for {
+      _ <- getAlarmDuration
+    } yield ()).exitCode
 }
 
 object SequentialCause extends App {
@@ -219,7 +222,7 @@ object SequentialCause extends App {
    * Using `Cause.++`, form a sequential cause by composing `failed1`
    * and `failed2`.
    */
-  lazy val composed = ???
+  lazy val composed = failed1 ++ failed2
 
   /**
    * EXERCISE
@@ -227,7 +230,7 @@ object SequentialCause extends App {
    * Using `Cause.prettyPrint`, dump out `composed` to the console.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    putStrLn(composed.prettyPrint).exitCode
 }
 
 object ParalellCause extends App {
@@ -242,7 +245,7 @@ object ParalellCause extends App {
    * Using `Cause.&&`, form a parallel cause by composing `failed1`
    * and `failed2`.
    */
-  lazy val composed = ???
+  lazy val composed = failed1 && failed2
 
   /**
    * EXERCISE
@@ -250,7 +253,7 @@ object ParalellCause extends App {
    * Using `Cause.prettyPrint`, dump out `composed` to the console.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    putStrLn(composed.prettyPrint).exitCode
 }
 
 object Sandbox extends App {
@@ -272,5 +275,16 @@ object Sandbox extends App {
    * resulting `Cause` value to the console using `putStrLn`.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    ???
+    composed.sandbox
+   .mapError(_.untraced).catchAll {
+       case Cause.Die(_: ArithmeticException) =>
+         // Caught defect: divided by zero!
+         IO.unit
+       case Cause.Fail(_) =>
+         // Caught error: DomainError!
+         IO.unit
+       case cause =>
+         // Caught unknown defects, shouldn't recover!
+         IO.halt(cause)
+     }.exitCode
 }
