@@ -105,7 +105,6 @@ object InterviewForeach extends App {
    * out the contents of the collection.
    */
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    // ZIO.foreach(questions)(putStrLn(_) *> getStrLn.ignore).exitCode
     ZIO.foreach(questions)(putStrLn(_) *> getStrLn.orDie).exitCode
 }
 
@@ -118,7 +117,11 @@ object WhileLoop extends App {
    * Implement the functional effect version of a while loop.
    */
   def whileLoop[R, E, A](cond: UIO[Boolean])(zio: ZIO[R, E, A]): ZIO[R, E, Chunk[A]] =
-    ???
+    (for {
+      bool <- cond
+      a    <- if (bool) whileLoop(cond)(zio) *> zio else zio
+    } yield a)
+      .map(Chunk(_))
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
     def loop(variable: Ref[Int]) =
@@ -147,7 +150,10 @@ object Iterate extends App {
    * evaluates to false, returning the "last" value of type `A`.
    */
   def iterate[R, E, A](start: A)(cond: A => Boolean)(f: A => ZIO[R, E, A]): ZIO[R, E, A] =
-    ???
+    f(start).flatMap {
+      if (cond(start)) iterate(_)(cond)(f)
+      else _ => ZIO.environment[R].map(_ => start)
+    }
 
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     iterate(0)(_ < 100)(i => putStrLn(s"At iteration: ${i}").as(i + 1)).exitCode
@@ -167,7 +173,7 @@ object TailRecursive extends App {
   })
 
   def handleRequest(request: Request): Task[Response] = Task {
-    println(s"Handling request ${request}")
+    println(s"Handling request $request")
     new Response {}
   }
 
@@ -177,7 +183,7 @@ object TailRecursive extends App {
    * Make this infinite loop (which represents a webserver) effectfully tail
    * recursive.
    */
-  lazy val webserver: Task[Nothing] =
+  lazy val webserver: Task[Nothing] = // TODO(albert)
     for {
       request  <- acceptRequest
       response <- handleRequest(request)

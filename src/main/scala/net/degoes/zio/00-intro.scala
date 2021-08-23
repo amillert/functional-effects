@@ -71,7 +71,7 @@ object ZIOModel {
       ZIO(run(_).map(f))
 
     def flatMap[R1 <: R, E1 >: E, B](f: A => ZIO[R1, E1, B]): ZIO[R1, E1, B] =
-      ???
+      ZIO(r1 => run(r1).flatMap(f(_).run(r1)))
 
     def zip[R1 <: R, E1 >: E, B](that: ZIO[R1, E1, B]): ZIO[R1, E1, (A, B)] =
       // self.flatMap(a => that.map(b => (a, b)))
@@ -80,9 +80,11 @@ object ZIOModel {
         b <- that
       } yield (a, b)
 
-    def either: ZIO[R, Nothing, Either[E, A]] = ???
+    def either: ZIO[R, Nothing, Either[E, A]] =
+      ZIO.environment[R].map(run)
 
-    def provide(r: R): ZIO[Any, E, A] = ???
+    def provide(r: R): ZIO[Any, E, A] =
+      ZIO(_ => run(r))
 
     def orDie(implicit ev: E <:< Throwable): ZIO[R, Nothing, A] =
       // ZIO(r => self.run(r).fold(throw _, Right(_)))
@@ -116,11 +118,11 @@ object ZIOTypes {
    *
    * Provide definitions for the ZIO type aliases below.
    */
-  type Task[+A]     = ???
-  type UIO[+A]      = ???
-  type RIO[-R, +A]  = ???
-  type IO[+E, +A]   = ???
-  type URIO[-R, +A] = ???
+  type Task[+A]     = ZIO[Any, Throwable, A]
+  type UIO[+A]      = ZIO[Any, Nothing, A]
+  type RIO[-R, +A]  = ZIO[R, Throwable, A]
+  type IO[+E, +A]   = ZIO[Any, E, A]
+  type URIO[-R, +A] = ZIO[R, Nothing, A]
 }
 
 object SuccessEffect extends App {
@@ -153,7 +155,8 @@ object HelloWorld extends App {
 object SimpleMap extends App {
   import zio.console._
 
-  val readLine = getStrLn.orDie
+  val readLine =
+    getStrLn.orDie
 
   /**
    * EXERCISE
@@ -349,7 +352,7 @@ object NumberGuesser extends App {
   def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     (for {
       random <- nextInt
-      guess <- getStrLn
+      guess  <- getStrLn
     } yield analyzeAnswer(random, guess)).exitCode
 }
 
