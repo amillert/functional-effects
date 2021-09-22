@@ -9,7 +9,8 @@ object Retry {
    *
    * Using `Schedule.recurs`, create a schedule that recurs 5 times.
    */
-  val fiveTimes: Schedule[Any, Any, Int] = ???
+  val fiveTimes: Schedule[Any, Any, Int] =
+    Schedule.recurs(5).map(_.toInt) // what about Schedule#as ?
 
   /**
    * EXERCISE
@@ -17,14 +18,16 @@ object Retry {
    * Using the `ZIO.repeat`, repeat printing "Hello World" five times to the
    * console.
    */
-  val repeated1 = ???
+  val repeated1 =
+    console.putStrLn("Hello World").repeat(Schedule.recurs(4)) // 4 or 5 ?
 
   /**
    * EXERCISE
    *
    * Using `Schedule.spaced`, create a schedule that recurs forever every 1 second.
    */
-  val everySecond = ???
+  val everySecond =
+    Schedule.spaced(duration.Duration.Finite(1000)) // some seconds syntax maybe ?
 
   /**
    * EXERCISE
@@ -33,7 +36,7 @@ object Retry {
    * and the `everySecond` schedule, create a schedule that repeats fives times,
    * evey second.
    */
-  val fiveTimesEverySecond = ???
+  val fiveTimesEverySecond = fiveTimes && everySecond
 
   /**
    * EXERCISE
@@ -41,7 +44,7 @@ object Retry {
    * Using the `ZIO#repeat`, repeat the action putStrLn("Hi hi") using
    * `fiveTimesEverySecond`.
    */
-  val repeated2 = ???
+  val repeated2 = console.putStrLn("Hi hi").repeat(fiveTimesEverySecond)
 
   /**
    * EXERCISE
@@ -50,7 +53,8 @@ object Retry {
    * schedule, create a schedule that repeats fives times rapidly, and then
    * repeats every second forever.
    */
-  val fiveTimesThenEverySecond = ???
+  val fiveTimesThenEverySecond = fiveTimes andThen everySecond // ?
+  // val fiveTimesThenEverySecond = fiveTimes ++ everySecond
 
   /**
    * EXERCISE
@@ -58,7 +62,7 @@ object Retry {
    * Using `ZIO#retry`, retry the following error a total of five times.
    */
   val error1   = IO.fail("Uh oh!")
-  val retried5 = ???
+  val retried5 = error1.retry(fiveTimes)
 
   /**
    * EXERCISE
@@ -67,7 +71,7 @@ object Retry {
    * schedule, create a schedule that repeats the minimum of five times and
    * every second.
    */
-  val fiveTimesOrEverySecond = ???
+  val fiveTimesOrEverySecond = fiveTimes || everySecond
 
   /**
    * EXERCISE
@@ -75,7 +79,7 @@ object Retry {
    * Using `Schedule.exponential`, create an exponential schedule that starts
    * from 10 milliseconds.
    */
-  val exponentialSchedule = ???
+  val exponentialSchedule = Schedule.exponential(duration.Duration.Finite(10))
 
   // (effect orElse otherService).retry(exponentialSchedule).timeout(60.seconds)
 
@@ -84,7 +88,7 @@ object Retry {
    *
    * Using `Schedule.jittered` produced a jittered version of `exponentialSchedule`.
    */
-  val jitteredExponential = ???
+  val jitteredExponential = exponentialSchedule.jittered // hmmm
 
   /**
    * EXERCISE
@@ -92,7 +96,7 @@ object Retry {
    * Using `Schedule.whileOutput`, produce a filtered schedule from `Schedule.forever`
    * that will halt when the number of recurrences exceeds 100.
    */
-  val oneHundred = ???
+  val oneHundred = Schedule.forever.whileOutput(_ < 100) // I guess 100 since 0 counts
 
   /**
    * EXERCISE
@@ -100,7 +104,7 @@ object Retry {
    * Using `Schedule.identity`, produce a schedule that recurs forever, without delay,
    * returning its inputs.
    */
-  def inputs[A]: Schedule[Any, A, A] = ???
+  def inputs[A]: Schedule[Any, A, A] = Schedule.identity
 
   /**
    * EXERCISE
@@ -116,7 +120,7 @@ object Retry {
    * Using  `*>` (`zipRight`), combine `fiveTimes` and `everySecond` but return
    * the output of `everySecond`.
    */
-  val fiveTimesEverySecondR = ???
+  val fiveTimesEverySecondR = fiveTimes *> everySecond
 
   /**
    * EXERCISE

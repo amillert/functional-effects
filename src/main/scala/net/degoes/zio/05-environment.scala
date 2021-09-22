@@ -13,7 +13,7 @@ object AccessEnvironment extends App {
    * Using `ZIO.access`, access a `Config` type from the environment, and
    * extract the `server` field from it.
    */
-  val accessServer: ZIO[Config, Nothing, String] = ???
+  val accessServer: ZIO[Config, Nothing, String] = ZIO.access[Config](_.server)
 
   /**
    * EXERCISE
@@ -21,7 +21,7 @@ object AccessEnvironment extends App {
    * Using `ZIO.access`, access a `Config` type from the environment, and
    * extract the `port` field from it.
    */
-  val accessPort: ZIO[Config, Nothing, Int] = ???
+  val accessPort: ZIO[Config, Nothing, Int] = ZIO.access[Config](_.port)
 
   def run(args: List[String]) = {
     val config = Config("localhost", 7878)
@@ -60,6 +60,13 @@ object ProvideEnvironment extends App {
   def run(args: List[String]) = {
     val config = Config("localhost", 7878)
 
+    type MyEnv = Config with DatabaseConnection
+
+    val xd: ZIO[Config, Nothing, Nothing] => IO[Nothing, Nothing] = ZIO.provide(config)
+
+    // // val xd = ZIO.provide(ZIO.access[Config with DatabaseConnection]) // .andThen(useDatabaseConnection)
+    // val xd = ZIO.provide[DatabaseConnection with Config, Throwable, Any](getServer.andThen(useDatabaseConnection))
+    // xd
     ???
   }
 }
@@ -103,9 +110,7 @@ object CakeEnvironment extends App {
    * (`Files with Logging`).
    */
   def run(args: List[String]) =
-    effect
-      .provide(???)
-      .exitCode
+    effect.provide(???).exitCode
 }
 
 /**

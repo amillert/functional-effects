@@ -13,13 +13,13 @@ object ConsoleInput extends zio.App {
    * Using `ZStream.fromEffect` and `getStrLn`, construct a stream that
    * will emit a single string, taken from the console.
    */
-  val singleRead: ZStream[Console, IOException, String] = ???
+  val singleRead: ZStream[Console, IOException, String] = ZStream.fromEffect(getStrLn)
 
   /**
    * Using `ZStream#forever`, take the `singleRead` stream, and turn it into
    * a stream that repeats forever.
    */
-  val consoleInput: ZStream[Console, IOException, String] = ???
+  val consoleInput: ZStream[Console, IOException, String] = singleRead.forever
 
   sealed trait Command
   object Command {
@@ -53,7 +53,7 @@ object FileStream extends zio.App {
    *
    * Using `ZStream.fromFile`, construct a stream of bytes from a file.
    */
-  def open(file: String): ZStream[Blocking, Throwable, Byte] = ???
+  def open(file: String): ZStream[Blocking, Throwable, Byte] = ZStream.fromFile(Path.of("./06-schedule.scala"))
 
   def run(args: List[String]) =
     (args match {
@@ -86,7 +86,7 @@ object StreamForeach extends zio.App {
    *
    * Using `ZStream#take`, take the first 100 numbers from the `fibonacci` stream.
    */
-  lazy val first100: ZStream[Any, Nothing, Int] = ???
+  lazy val first100: ZStream[Any, Nothing, Int] = fibonacci.take(100)
 
   /**
    * EXERCISE
@@ -95,7 +95,7 @@ object StreamForeach extends zio.App {
    * each of the first 100 fibonacci numbers.
    */
   def run(args: List[String]) =
-    ???
+    first100.foreach(x => putStrLn(x.toString)).exitCode
 }
 
 object StreamRunCollect extends zio.App {
@@ -122,7 +122,7 @@ object StreamRunCollect extends zio.App {
    * numbers from the stream `first100`, and print them out using `putStrLn`.
    */
   def run(args: List[String]) =
-    ???
+    first100.runCollect.flatMap(x => putStrLn(x.toString)).exitCode
 }
 
 /**
@@ -145,11 +145,8 @@ object FileTransducer extends zio.App {
    * Using the `open` function you wrote in `FileStream` and `ZTransducer.utf8Decode`, construct a
    * stream of strings by using the `ZStream#>>>` method.
    */
-  def open(file: String): ZStream[Blocking, Throwable, String] = {
-    val _ = FileStream.open(file)
-
-    ???
-  }
+  def open(file: String): ZStream[Blocking, Throwable, String] =
+    FileStream.open(file) >>> ZTransducer.utf8Decode
 
   def run(args: List[String]) =
     (args match {
@@ -180,11 +177,8 @@ object FileSink extends zio.App {
    * Using the `open` function you wrote in `FileStream`, and `ZSink.fromFile`, implement a method
    * to copy a file from one location to another.
    */
-  def copy(source: String, dest: String): ZIO[Blocking, Throwable, Any] = {
-    val _ = FileStream.open(source)
-
-    ???
-  }
+  def copy(source: String, dest: String): ZIO[Blocking, Throwable, Any] =
+    FileStream.open(source) >>> ZSink.fromFile(Path.of(dest))
 
   def run(args: List[String]) =
     (args match {
@@ -210,7 +204,14 @@ object FileSinkMapReduce extends zio.App {
    * Using `ZSink.fold`, create a custom sink that counts words in a file, and use that, together
    * with the other functionality you created or learned about, to implement a word count program.
    */
-  def wordCount(file: String): ZIO[Blocking, Throwable, Map[String, Int]] = ???
+  def wordCount(file: String): ZIO[Blocking, Throwable, Map[String, Int]] =
+    FileStream
+      .open(file)
+      .run(
+        ZSink.fold(Map.empty[String, Int])(_ == ZStream.empty) { (m, w: Byte) =>
+          m.updated(w.toString, m.get(w.toString).orElse(Some(0)).map(_ + 1).get)
+        }
+      )
 
   def run(args: List[String]) =
     (args match {
